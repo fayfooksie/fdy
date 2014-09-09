@@ -10,7 +10,7 @@ var	fdy={
 		"DIR": "<table width='100%'><$links$></table>"
 		},
 	dy: /\.dy\.\w*$/,
-	dytag: /<\$([^\$]+)\$>/g,
+	dytag: /<\$(.*?)\$>/g,
 	listen: function(port) {
 		http.createServer(function(request, response) {
 			var	_url=url.parse("./public"+request.url),
