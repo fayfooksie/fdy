@@ -7,8 +7,10 @@ var	fdy={
 	temp: {},
 	templates: {
 		"404": "404 Not Found",
-		"DIR": "<$links$>"
+		"DIR": "<table width='100%'><$links$></table>"
 		},
+	dy: /\.dy\.\w*$/,
+	dytag: /<\$([^\$]+)\$>/g,
 	listen: function(port) {
 		http.createServer(function(request, response) {
 			var	_url=url.parse("./public"+request.url),
@@ -57,16 +59,18 @@ var	fdy={
 								<td>"+(stats.size/1e3).toFixed(2)+" KB</td>\
 								<td>"+stats.mtime.toDateString()+"</td></tr>";
 							}
+						var	dirrows=doc_dir+doc_fil;
 						response.write(fdy.templates["DIR"]
-							.replace(/<\$title\$>/, request.url)
-							.replace(/<\$links\$>/, doc_dir+doc_fil)
+							.replace(fdy.dytag, function(_, code) {
+								return eval(code);
+								})
 							);
 						response.end();
 						return;
 						}
 					path=mime.lookup(path);
-					if(/\.dy\.\w*$/.test(_url.pathname)) {
-						file=file.replace(/<\$([^\$]+)\$>/g, function(match, code) {
+					if(fdy.dy.test(_url.pathname)) {
+						file=file.replace(fdy.dytag, function(_, code) {
 							return eval(code);
 							});
 						}
