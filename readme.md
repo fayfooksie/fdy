@@ -47,4 +47,4 @@ any `filename.dy.ext` is treated as a dynamic file where anything wrapped in `<$
     fdy.dy=/\.dynamic\.\w*$/;
 
     // <!-- ... -->
-    fdy.dytag=/<\!\-\-.*?\-\->/g;
+    fdy.dytag=/<\!\-\-(.*?)\-\->/g;
