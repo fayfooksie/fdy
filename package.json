@@ -1,0 +1,14 @@
+{
+	"name": "fdy",
+	"version": "0.0.0",
+	"author": "fay fooksie",
+	"description": "a simple file server with templates and dynamic files",
+	"main": "module.js",
+	"repository": {
+		"type": "git",
+		"url": "git://github.com/fayfooksie/fdy.git"
+		},
+	"dependencies": {
+		"mime": "1.2.x"
+		}
+	}
