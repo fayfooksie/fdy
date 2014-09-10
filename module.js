@@ -2,6 +2,7 @@ var	fs=require("fs"),
 	url=require("url"),
 	mime=require("mime"),
 	http=require("http");
+var	cache={};
 var	fdy={
 	fs: fs,
 	temp: {},
@@ -9,12 +10,48 @@ var	fdy={
 		"404": "404 Not Found",
 		"DIR": "<table width='100%'><$links$></table>"
 		},
+	cache: 3600,
+	server: null,
 	dy: /\.dy\.\w*$/,
 	dytag: /<\$(.*?)\$>/g,
+	directory: "./public",
+	set: function(key, url, directory) {
+		if(directory!==false) {
+			url=fdy.directory+"/"+url;
+			}
+		fdy.fs.readFile(url, "binary", function(error, file) {
+			if(error) {
+				console.error(error.stack);
+				return; 
+				}
+			fdy.templates[key]=file;
+			});
+		},
+	handle: function(url, response, cache) {
+		var	file=cache.file;
+		if(fdy.dy.test(url.pathname)) {
+			file=file.replace(fdy.dytag, function(_, code) {
+				return eval(code);
+				});
+			}
+		response.writeHead(200, {
+			"Content-Type": cache.type
+			});
+		response.write(file, "binary");
+		response.end();
+		},
 	listen: function(port) {
-		http.createServer(function(request, response) {
-			var	_url=url.parse("./public"+request.url),
+		fdy.server=http.createServer(function(request, response) {
+			var	_url=url.parse(fdy.directory+request.url),
 				path=decodeURIComponent(_url.pathname);
+			if(cache[path] || cache[path+"index.html"]) {
+				if(!cache[path]) {
+					path+="index.html";
+					}
+				fdy.handle(_url, response, cache[path]);
+				cache[path].timer._idleStart=Date.now();
+				return;
+				}
 			fs.exists(path, function(exists) {
 				if(!exists) {
 					response.writeHead(404, {
@@ -25,7 +62,7 @@ var	fdy={
 					return;
 					}
 				if(fs.statSync(path).isDirectory()) {
-					path+="/index.html";
+					path+="index.html";
 					}
 				fs.readFile(path, "binary", function(error, file) {
 					if(error) {
@@ -56,7 +93,7 @@ var	fdy={
 								}
 							doc_fil+="<tr>\
 								<td><a href='"+files[i]+"'>"+files[i]+"</a>\
-								<td>"+(stats.size/1e3).toFixed(2)+" KB</td>\
+								<td>"+(stats.size/1000).toFixed(2)+" KB</td>\
 								<td>"+stats.mtime.toDateString()+"</td></tr>";
 							}
 						var	dirrows=doc_dir+doc_fil;
@@ -68,20 +105,17 @@ var	fdy={
 						response.end();
 						return;
 						}
-					path=mime.lookup(path);
-					if(fdy.dy.test(_url.pathname)) {
-						file=file.replace(fdy.dytag, function(_, code) {
-							return eval(code);
-							});
-						}
-					response.writeHead(200, {
-						"Content-Type": path
+					fdy.handle(_url, response, cache[path]={
+						file: file,
+						type: mime.lookup(path),
+						timer: setTimeout(function() {
+							delete cache[path];
+							}, fdy.cache*1000)
 						});
-					response.write(file, "binary");
-					response.end();
 					});
 				});
 			}).listen(port);
+		return fdy;
 		}
 	};
 module.exports=fdy;
