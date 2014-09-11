@@ -1,13 +1,14 @@
 ##do it
     var fdy=require("fdy");
-    fdy.listen(1234);
+    fdy.listen(4444);
+    // fdy.directory="./public"; //default
 
 ##templates
 currently only `404` and `DIR`
 
-    fdy.fs.readFile("./public/404.html", "binary", function(error, file) {
-        if(!error) fdy.templates["404"]=file;
-        });
+    // fdy.load(template, location[, ignoreDirectory]);
+    fdy.load("404", "example-404.html");
+    fdy.load("DIR", "example-dir.html");
 
 **example-dir.html**
 
@@ -40,8 +41,12 @@ any `filename.dy.ext` is treated as a dynamic file where anything wrapped in `<$
         "alright"
         ][Math.floor(Math.random()*3)]$>");
 
-##change regex
-`fdy.dy` and `fdy.dytag` match dynamic files and wrapping, respectively
+##customize
+`fdy.cache` is a number (in seconds) for cached file duration (default `3600`)
+
+`fdy.directory` is a string for the parent directory to serve files from (default `"./public"`)
+
+`fdy.dy` and `fdy.dytag` are regular expressions matching dynamic file extensions and executable code wrapping respectively
 
     // filename.dynamic.ext
     fdy.dy=/\.dynamic\.\w*$/;
