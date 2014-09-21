@@ -8,18 +8,15 @@ var	fdy={
 	temp: {},
 	templates: {
 		"404": "404 Not Found",
-		"DIR": "<table width='100%'><$links$></table>"
+		"DIR": "<table width='100%'>{{~dirrows}}</table>"
 		},
 	cache: 3600,
 	server: null,
-	dy: /\.dy\.\w*$/,
-	dytag: /<\$(.*?)\$>/g,
+	dy: /\.dy\.\w+$/,
+	dytag: /{{~([^]+?)}}/g,
 	directory: "./public",
-	set: function(key, url, directory) {
-		if(directory!==false) {
-			url=fdy.directory+"/"+url;
-			}
-		fdy.fs.readFile(url, "binary", function(error, file) {
+	set: function(key, url) {
+		fdy.fs.readFile(fdy.directory+"/"+url, "binary", function(error, file) {
 			if(error) {
 				console.error(error.stack);
 				return; 
@@ -43,8 +40,12 @@ var	fdy={
 	listen: function(port) {
 		fdy.server=http.createServer(function(request, response) {
 			var	_url=url.parse(fdy.directory+request.url),
-				path=decodeURIComponent(_url.pathname);
-			if(cache[path] || cache[path+"index.html"]) {
+				path=decodeURIComponent(_url.pathname),
+				noindex=_url.query==="/";
+			if(fdy.onload) {
+				fdy.onload(request, response);
+				}
+			if(cache[path] || cache[path+"index.html"] && !noindex) {
 				if(!cache[path]) {
 					path+="index.html";
 					}
@@ -62,10 +63,15 @@ var	fdy={
 					return;
 					}
 				if(fs.statSync(path).isDirectory()) {
-					path+="index.html";
+					if(!noindex) {
+						path+="index.html";
+						}
+					}
+				else {
+					noindex=false;
 					}
 				fs.readFile(path, "binary", function(error, file) {
-					if(error) {
+					if(error || noindex) {
 						if(request.url[request.url.length-1]!=="/") {
 							response.writeHead(302, {
 								"Location": request.url+"/"
@@ -79,7 +85,9 @@ var	fdy={
 								});
 						var	stats=null,
 							doc_fil="",
-							doc_dir="",
+							doc_dir="<tr>\
+								<td><a href='../'>../</a></td>\
+								<td>-</td><td>-</td></tr>",
 							files=fs.readdirSync(path);
 						for(var i=0; i<files.length; ++i) {
 							stats=fs.statSync(path+files[i]);

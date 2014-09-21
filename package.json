@@ -1,6 +1,6 @@
 {
 	"name": "fdy",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"author": "fay fooksie",
 	"description": "a simple file server with templates and dynamic files",
 	"main": "module.js",
