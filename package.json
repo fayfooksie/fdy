@@ -1,8 +1,8 @@
 {
 	"name": "fdy",
-	"version": "0.0.2",
+	"version": "1.0.0",
 	"author": "fay fooksie",
-	"description": "a simple file server with templates and dynamic files",
+	"description": "a simple file server with some features",
 	"main": "module.js",
 	"repository": {
 		"type": "git",
