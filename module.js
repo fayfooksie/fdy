@@ -3,6 +3,7 @@ var	fs=require("fs"),
 	http=require("http");
 var	cache={},
 	events={},
+	hidden=null,
 	replaces=[],
 	redirects=[],
 	forbiddens=[];
@@ -25,6 +26,7 @@ var	fdy={
 			+"</tr>}}</table>"
 		},
 	cache: 3600,
+	index: true,
 	server: null,
 	directory: "./public",
 	on: function(event, callback) {
@@ -38,6 +40,9 @@ var	fdy={
 				}
 			fdy.templates[key]=file;
 			});
+		},
+	hide: function(regex) {
+		hidden=regex;
 		},
 	replace: function(regex, string) {
 		replaces.push(regurl(regex), string);
@@ -119,6 +124,13 @@ var	fdy={
 							response.end();
 							return;
 							}
+						if(!fdy.index) {
+							response.writeHead(403, {
+								"Content-Type": "text/html"
+								});
+							response.end(fdy.templates["403"]);
+							return;
+							}
 						function fmtFileSize(size) {
 							if(size>1073741824) {
 								return (size/1073741824).toFixed(2)+" GB";
@@ -138,20 +150,24 @@ var	fdy={
 							doc_files="",
 							doc_dirs=fmt
 								.replace(/\$fileurl|\$filename/g, "../")
-								.replace(/\$filesize|\$filedate/g, "-");
-							files=fs.readdirSync(path);
-						for(var i=0; i<files.length; ++i) {
+								.replace(/\$filesize|\$filedate/g, "-"),
+							files=fs.readdirSync(path),
+							opath=path.substring(fdy.directory.length);
+						for(var i=0, j; i<files.length; ++i) {
+							if(hidden && hidden.test(opath+files[i])) {
+								continue;
+								}
 							stats=fs.statSync(path+files[i]);
 							if(stats.isDirectory()) {
 								doc_dirs+=fmt
-									.replace(/\$fileurl/, encodeURI(files[i]+"/"))
+									.replace(/\$fileurl/, encodeURIComponent(files[i])+"/")
 									.replace(/\$filename/, files[i]+"/")
 									.replace(/\$filesize/, "-")
 									.replace(/\$filedate/, stats.mtime.toDateString());
 								continue;
 								}
 							doc_files+=fmt
-								.replace(/\$fileurl/, encodeURI(files[i]))
+								.replace(/\$fileurl/, encodeURIComponent(files[i]))
 								.replace(/\$filename/, files[i])
 								.replace(/\$filesize/, fmtFileSize(stats.size))
 								.replace(/\$filedate/, stats.mtime.toDateString());
