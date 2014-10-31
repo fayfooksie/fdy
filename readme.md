@@ -12,17 +12,17 @@ fdy.listen(4444);
 - `event` String (currently only `"request"`)
 - `callback` Function(request, response)
 
-###fdy.hide(regex)
+####fdy.hide(regex)
 Hide certain file and name patterns from directory listing (if enabled). Unlike `replace`, `redirect`, and `forbidden`, only accepts one pattern (use something like `/a|b|c/` for multiple).
 - `regex` RegExp | String
 
 ####fdy.replace(regex, string)
-Make changes to path before handling (i.e. `/forum/1/2` -> `/forum`).
+Make changes to path before handling (i.e. `/forum/1/2` → `/forum`).
 - `regex` RegExp | String
 - `string` String
 
 ####fdy.redirect(regex, string)
-Serve 302 to specified path (i.e. `/blog` -> external blog).
+Serve 302 to specified path (i.e. `/blog` → `http://external.blog/`).
 - `regex` RegExp | String
 - `string` String
 
