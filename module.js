@@ -61,12 +61,6 @@ var	fdy={
 		},
 	forbiddens: {},
 	handle: function(regex, callback) {
-		if(regex.constructor===String) {
-			regex=new RegExp("^"+regex
-				.replace(/\./g, "\\.")
-				.replace(/\?/g, "\\?")
-				);
-			}
 		handles.push(regex, callback);
 		},
 	listen: function(port) {
@@ -217,7 +211,7 @@ var	fdy={
 						"Content-Type": cache[path].type
 						});
 					for(var i=0; i<handles.length; i+=2) {
-						if(handles[i].test(url)) {
+						if(handles[i]===path) {
 							cache[path].handle=handles[i+1];
 							handles[i+1](request, response, cache[path].file);
 							return;
