@@ -31,9 +31,9 @@ Serve 403 from specified path (if directory, also excludes files by default).
 - `regex` RegExp | String
 - `files` Boolean (`true` to allow direct file requests such as images)
 
-####fdy.handle(regex, callback)
+####fdy.handle(path, callback)
 Manipulate select data before sending it. The first argument determines what requests a handle applies to based on url.
-- `regex` RegExp | String
+- `regex` String
 - `callback` Function(request, response, data)
 
 Example usage (**app.js**)
@@ -41,7 +41,8 @@ Example usage (**app.js**)
 quotes={
 	foo: "bar"
 	};
-fdy.handle(/^\/quote\/\w+$/, function(request, response, data) {
+fdy.replace(/^\/quote\/\w+$/, "/quote/");
+fdy.handle("/quote/"/, function(request, response, data) {
 	var	name=request.url.substring(7);
 	response.end(data
 		.replace(/{{author}}/, name)
