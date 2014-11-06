@@ -176,7 +176,7 @@ var	fdy={
 								.replace(/\$filesize|\$filedate/g, "-"),
 							files=fs.readdirSync(pathf);
 						for(var i=0, j; i<files.length; ++i) {
-							if(hidden && hidden.test(opath+files[i])) {
+							if(hidden && hidden.test(pathf+files[i])) {
 								continue;
 								}
 							stats=fs.statSync(pathf+files[i]);
