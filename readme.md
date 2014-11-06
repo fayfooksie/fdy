@@ -31,6 +31,31 @@ Serve 403 from specified path (if directory, also excludes files by default).
 - `regex` RegExp | String
 - `files` Boolean (`true` to allow direct file requests such as images)
 
+####fdy.handle(regex, callback)
+Manipulate select data before sending it. The first argument determines what requests a handle applies to based on url.
+- `regex` RegExp | String
+- `callback` Function(request, response, data)
+
+Example usage (**app.js**)
+```javascript
+quotes={
+	foo: "bar"
+	};
+fdy.handle(/^\/quote\/\w+$/, function(request, response, data) {
+	var	name=request.url.substring(7);
+	response.end(data
+		.replace(/{{author}}/, name)
+		.replace(/{{quote}}/, quotes[name]||"unknown author")
+		);
+	});
+```
+and **index.html**
+```html
+<blockquote>
+	{{quote}} -- {{author}}
+</blockquote>
+```
+
 ##templates
 Currently supports `403`, `404` and `DIR` -- point to files to serve for 403, 404, and directory pages. Grabs from public `fdy.directory` since any external files (such as stylesheets) would have to be public as well (obviously).
 ```javascript
@@ -56,4 +81,5 @@ fdy.set("DIR", "pages/directory.html");
 </table>
 ```
 ##where'd the dynamic file feature go?
-I wasn't using it and I doubt anyone else was. I jumped from 0.0.3 to 1.0.0 to represent the change since it pretty much defeats the original purpose of fdy. I plan to add an event one could use to emulate that behavior again in the future.
+<strike>I wasn't using it and I doubt anyone else was. I jumped from 0.0.3 to 1.0.0 to represent the change since it pretty much defeats the original purpose of fdy. I plan to add an event one could use to emulate that behavior again in the future.</strike>
+See [fdy.handle](#fdyhandleregex-callback)
