@@ -6,13 +6,8 @@ var	cache={},
 	hidden=null,
 	replaces=[],
 	redirects=[],
-	forbiddens=[];
-function regurl(regex) {
-	if(regex.constructor===String) {
-		regex=new RegExp((regex[0]==="/"?"^":"^/")+regex);
-		}
-	return regex;
-	};
+	forbiddens=[],
+	handles=[];
 var	fdy={
 	fs: fs,
 	temp: {},
@@ -45,26 +40,52 @@ var	fdy={
 		hidden=regex;
 		},
 	replace: function(regex, string) {
-		replaces.push(regurl(regex), string);
+		replaces.push(regex, string);
 		},
-	replaces: replaces,
 	redirect: function(regex, string) {
-		redirects.push(regurl(regex), string);
+		if(regex.constructor===String) {
+			redirects[regex]=string;
+			}
+		else {
+			redirects.push(regex, string);
+			}
 		},
-	redirects: redirects,
+	redirects: {},
 	forbidden: function(regex, files) {
-		forbiddens.push(regurl(regex), !files);
+		if(regex.constructor===String) {
+			forbiddens[regex]=1;
+			}
+		else {
+			forbiddens.push(regex, !files);
+			}
 		},
-	forbiddens: forbiddens,
+	forbiddens: {},
+	handle: function(regex, callback) {
+		if(regex.constructor===String) {
+			regex=new RegExp("^"+regex
+				.replace(/\./g, "\\.")
+				.replace(/\?/g, "\\?")
+				);
+			}
+		handles.push(regex, callback);
+		},
 	listen: function(port) {
 		fdy.server=http.createServer(function(request, response) {
 			if(events.request) {
 				events.request.call(fdy, request, response);
 				}
-			var	path=decodeURIComponent(request.url.split(/\?/)[0]),
+			var	url=request.url.split(/\?/)[0],
+				path=decodeURIComponent(url),
 				noindex=/\?\/$/.test(request.url);
 			for(var i=0; i<replaces.length; i+=2) {
 				path=path.replace(replaces[i], replaces[i+1]);
+				}
+			if(redirects[path]) {
+				response.writeHead(302, {
+					"Location": redirects[path]
+					});
+				response.end();
+				return;
 				}
 			for(var i=0; i<redirects.length; i+=2) {
 				if(redirects[i].test(path)) {
@@ -74,6 +95,13 @@ var	fdy={
 					response.end();
 					return;
 					}
+				}
+			if(forbiddens[path]) {
+				response.writeHead(403, {
+					"Content-Type": "text/html"
+					});
+				response.end(fdy.templates["403"]);
+				return;
 				}
 			for(var i=0; i<forbiddens.length; i+=2) {
 				if(forbiddens[i].test(path)) {
@@ -86,19 +114,21 @@ var	fdy={
 						}
 					}
 				}
-			path=fdy.directory+path;
-			if(!noindex && cache[path] || cache[path+"index.html"]) {
-				if(!cache[path]) {
-					path+="index.html";
-					}
+			if(!noindex && cache[path]) {
 				response.writeHead(200, {
 					"Content-Type": cache[path].type
 					});
-				response.end(cache[path].file, "binary");
+				if(cache[path].handle) {
+					cache[path].handle(request, response, cache[path].file);
+					}
+				else {
+					response.end(cache[path].file, "binary");
+					}
 				cache[path].timer._idleStart=Date.now();
 				return;
 				}
-			fs.exists(path, function(exists) {
+			var	pathf=fdy.directory+path;
+			fs.exists(pathf, function(exists) {
 				if(!exists) {
 					response.writeHead(404, {
 						"Content-Type": "text/html"
@@ -106,8 +136,7 @@ var	fdy={
 					response.end(fdy.templates["404"]);
 					return;
 					}
-				var	pathf=path;
-				if(fs.statSync(path).isDirectory()) {
+				if(fs.statSync(pathf).isDirectory()) {
 					if(!noindex) {
 						pathf+="index.html";
 						}
@@ -117,9 +146,9 @@ var	fdy={
 					}
 				fs.readFile(pathf, "binary", function(error, file) {
 					if(error || noindex) {
-						if(path[path.length-1]!=="/") {
+						if(url[url.length-1]!=="/") {
 							response.writeHead(302, {
-								"Location": path.slice(fdy.directory.length)+"/"
+								"Location": url+"/"
 								});
 							response.end();
 							return;
@@ -140,10 +169,10 @@ var	fdy={
 								}
 							return (size/1024).toFixed(2)+" KB";
 							};
-						path=decodeURIComponent(path);
 						response.writeHead(200, {
 								"Content-Type": "text/html"
 								});
+						pathf=fdy.directory+path;
 						var	stats=null,
 							fmt=fdy.templates.DIR
 								.match(/{{([^]+?)}}/)[1],
@@ -151,13 +180,12 @@ var	fdy={
 							doc_dirs=fmt
 								.replace(/\$fileurl|\$filename/g, "../")
 								.replace(/\$filesize|\$filedate/g, "-"),
-							files=fs.readdirSync(path),
-							opath=path.substring(fdy.directory.length);
+							files=fs.readdirSync(pathf);
 						for(var i=0, j; i<files.length; ++i) {
 							if(hidden && hidden.test(opath+files[i])) {
 								continue;
 								}
-							stats=fs.statSync(path+files[i]);
+							stats=fs.statSync(pathf+files[i]);
 							if(stats.isDirectory()) {
 								doc_dirs+=fmt
 									.replace(/\$fileurl/, encodeURIComponent(files[i])+"/")
@@ -178,17 +206,24 @@ var	fdy={
 							);
 						return;
 						}
-					cache[pathf]={
+					cache[path]={
 						file: file,
 						type: mime.lookup(pathf),
 						timer: setTimeout(function() {
-							delete cache[pathf];
+							delete cache[path];
 							}, fdy.cache*1000)
 						};
 					response.writeHead(200, {
-						"Content-Type": cache[pathf].type
+						"Content-Type": cache[path].type
 						});
-					response.end(cache[pathf].file, "binary");
+					for(var i=0; i<handles.length; i+=2) {
+						if(handles[i].test(url)) {
+							cache[path].handle=handles[i+1];
+							handles[i+1](request, response, cache[path].file);
+							return;
+							}
+						}
+					response.end(cache[path].file, "binary");
 					});
 				});
 			}).listen(port);
