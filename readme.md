@@ -1,4 +1,4 @@
-fdy is a simple, effortless file server with nifty features such as URL rewriting (see [fdy.replace](fdy-replace)), file directory listing (can be disabled), and file manipulation (see [fdy.handle](fdy-handle))
+fdy is a simple, effortless file server with nifty features such as URL rewriting (see [fdy.replace](fdyreplaceregex-string)), file directory listing (can be disabled), and file manipulation (see [fdy.handle](fdyhandlepath-callback))
 
 ##do it
 ```javascript
@@ -10,30 +10,30 @@ fdy.listen(4444);
 - `fdy.index=true;` allow directory listing (default `true`)
 - `fdy.directory="./public";` change root file directory (default `"./public"`)
 
-####fdy.on(event, callback) {#fdy-on}
+####fdy.on(event, callback)
 - `event` String (currently only `"request"`)
 - `callback` Function(request, response)
 
-####fdy.hide(regex) {#fdy-hide}
+####fdy.hide(regex)
 Hide certain file and name patterns from directory listing (if enabled). <strike>Unlike `replace`, `redirect`, and `forbidden`, only accepts one pattern (use something like `/a|b|c/` for multiple).</strike> As of 1.0.5 works just the same.
 - `regex` RegExp | String
 
-####fdy.replace(regex, string) {#fdy-replace}
+####fdy.replace(regex, string)
 Make changes to path before handling (i.e. `/forum/1/2` → `/forum`).
 - `regex` RegExp | String
-- `string` String
+- `string` String (Function would also work, as it is a regular `replace`)
 
-####fdy.redirect(regex, string) {#fdy-redirect}
+####fdy.redirect(regex, string)
 Serve 302 to specified path (i.e. `/blog` → `http://external.blog/`).
 - `regex` RegExp | String
 - `string` String
 
-####fdy.forbidden(regex, files) {#fdy-forbidden}
+####fdy.forbidden(regex, files)
 Serve 403 from specified path (if directory, also excludes files by default).
 - `regex` RegExp | String
 - `files` Boolean (`true` to allow direct file requests such as images)
 
-####fdy.handle(path, callback) {#fdy-handle}
+####fdy.handle(path, callback)
 Manipulate select data before sending it. The first argument determines what requests a handle applies to based on url.
 - `path` String
 - `callback` Function(request, response, data)
@@ -84,4 +84,4 @@ fdy.set("DIR", "pages/directory.html");
 </table>
 ```
 ##Where'd the dynamic file feature go?
-<strike>I wasn't using it and I doubt anyone else was. I jumped from 0.0.3 to 1.0.0 to represent the change since it pretty much defeats the original purpose of fdy. I plan to add an event one could use to emulate that behavior again in the future.</strike> See [fdy.handle](#fdy-handle).
+<strike>I wasn't using it and I doubt anyone else was. I jumped from 0.0.3 to 1.0.0 to represent the change since it pretty much defeats the original purpose of fdy. I plan to add an event one could use to emulate that behavior again in the future.</strike> See [fdy.handle](#fdyhandlepath-callback).
