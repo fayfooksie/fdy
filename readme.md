@@ -1,3 +1,5 @@
+fdy is a simple, effortless file server with nifty features such as URL rewriting (see [fdy.replace](fdy-replace)), file directory listing (can be disabled), and file manipulation (see [fdy.handle](fdy-handle))
+
 ##do it
 ```javascript
 var fdy=require("fdy");
@@ -8,32 +10,32 @@ fdy.listen(4444);
 - `fdy.index=true;` allow directory listing (default `true`)
 - `fdy.directory="./public";` change root file directory (default `"./public"`)
 
-####fdy.on(event, callback)
+####fdy.on(event, callback) {#fdy-on}
 - `event` String (currently only `"request"`)
 - `callback` Function(request, response)
 
-####fdy.hide(regex)
-Hide certain file and name patterns from directory listing (if enabled). Unlike `replace`, `redirect`, and `forbidden`, only accepts one pattern (use something like `/a|b|c/` for multiple).
+####fdy.hide(regex) {#fdy-hide}
+Hide certain file and name patterns from directory listing (if enabled). <strike>Unlike `replace`, `redirect`, and `forbidden`, only accepts one pattern (use something like `/a|b|c/` for multiple).</strike> As of 1.0.5 works just the same.
 - `regex` RegExp | String
 
-####fdy.replace(regex, string)
+####fdy.replace(regex, string) {#fdy-replace}
 Make changes to path before handling (i.e. `/forum/1/2` → `/forum`).
 - `regex` RegExp | String
 - `string` String
 
-####fdy.redirect(regex, string)
+####fdy.redirect(regex, string) {#fdy-redirect}
 Serve 302 to specified path (i.e. `/blog` → `http://external.blog/`).
 - `regex` RegExp | String
 - `string` String
 
-####fdy.forbidden(regex, files)
+####fdy.forbidden(regex, files) {#fdy-forbidden}
 Serve 403 from specified path (if directory, also excludes files by default).
 - `regex` RegExp | String
 - `files` Boolean (`true` to allow direct file requests such as images)
 
-####fdy.handle(path, callback)
+####fdy.handle(path, callback) {#fdy-handle}
 Manipulate select data before sending it. The first argument determines what requests a handle applies to based on url.
-- `regex` String
+- `path` String
 - `callback` Function(request, response, data)
 
 Example usage (**app.js**)
@@ -57,7 +59,7 @@ and **index.html**
 </blockquote>
 ```
 
-##templates
+##Pages
 Currently supports `403`, `404` and `DIR` -- point to files to serve for 403, 404, and directory pages. Grabs from public `fdy.directory` since any external files (such as stylesheets) would have to be public as well (obviously).
 ```javascript
 fdy.hide("pages");
@@ -81,6 +83,5 @@ fdy.set("DIR", "pages/directory.html");
 	</tr>}}
 </table>
 ```
-##where'd the dynamic file feature go?
-<strike>I wasn't using it and I doubt anyone else was. I jumped from 0.0.3 to 1.0.0 to represent the change since it pretty much defeats the original purpose of fdy. I plan to add an event one could use to emulate that behavior again in the future.</strike>
-See [fdy.handle](#fdyhandleregex-callback)
+##Where'd the dynamic file feature go?
+<strike>I wasn't using it and I doubt anyone else was. I jumped from 0.0.3 to 1.0.0 to represent the change since it pretty much defeats the original purpose of fdy. I plan to add an event one could use to emulate that behavior again in the future.</strike> See [fdy.handle](#fdy-handle).
