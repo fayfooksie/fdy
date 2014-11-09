@@ -1,4 +1,4 @@
-fdy is a simple, effortless file server with nifty features such as URL rewriting (see [fdy.replace](fdyreplaceregex-string)), file directory listing (can be disabled), and file manipulation (see [fdy.handle](fdyhandlepath-callback))
+fdy is a simple, effortless file server with nifty features such as URL rewriting (see [fdy.replace](#fdyreplaceregex-string)), file directory listing (can be disabled), and file manipulation (see [fdy.handle](#fdyhandlepath-callback))
 
 ##do it
 ```javascript
