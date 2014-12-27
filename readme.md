@@ -1,4 +1,4 @@
-fdy is a simple, effortless file server with nifty features such as URL rewriting (see [fdy.replace](#fdyreplaceregex-string)), file directory listing (can be disabled), and file manipulation (see [fdy.handle](#fdyhandlepath-callback))
+﻿fdy is a simple, effortless file server with nifty features such as URL rewriting (see [fdy.replace](#fdyreplaceregex-string)), file directory listing (can be disabled), and file manipulation (see [fdy.handle](#fdyhandlepath-callback))
 
 ##do it
 ```javascript
@@ -11,8 +11,14 @@ fdy.listen(4444);
 - `fdy.directory="./public";` change root file directory (default `"./public"`)
 
 ####fdy.on(event, callback)
-- `event` String (currently only `"request"`)
+Handle events. Currently the only event is `"request"`.
+- `event` String
 - `callback` Function(request, response)
+
+####fdy.header(type, header)
+Set headers for specific file mimetypes (ex. `text/plain`) or general types (ex. `text/*`).
+- `type` String
+- `header` Object
 
 ####fdy.hide(regex)
 Hide certain file and name patterns from directory listing (if enabled). <strike>Unlike `replace`, `redirect`, and `forbidden`, only accepts one pattern (use something like `/a|b|c/` for multiple).</strike> As of 1.0.5 works just the same.
@@ -44,7 +50,7 @@ quotes={
 	foo: "bar"
 	};
 fdy.replace(/^\/quote\/\w+$/, "/quote/");
-fdy.handle("/quote/"/, function(request, response, data) {
+fdy.handle("/quote/", function(request, response, data) {
 	var	name=request.url.substring(7);
 	response.end(data
 		.replace(/{{author}}/, name)

@@ -1,7 +1,9 @@
 var	fs=require("fs"),
-	mime=require("mime"),
-	http=require("http");
+	http=require("http"),
+	mime=require("./mime.json"),
+	type=require("./type.json");
 var	cache={},
+	headers={},
 	events={},
 	hidden={},
 	hiddens=[],
@@ -40,6 +42,22 @@ var	fdy={
 				fdy.pages[key]=file;
 				}
 			});
+		},
+	header: function(ctype, header) {
+		if(type[ctype]) {
+			ctype=type[ctype];
+			for(var i=ctype.length, key; i--;) {
+				for(key in header) {
+					fdy.header[ctype[i]][key]=header[key];
+					}
+				}
+			}
+		else {
+			if(!header["Content-Type"]) {
+				header["Content-Type"]=ctype;
+				}
+			fdy.header[ctype]=header;
+			}
 		},
 	hide: function(regex) {
 		if(regex.constructor===String) {
@@ -129,9 +147,7 @@ var	fdy={
 					}
 				}
 			if(!noindex && cache[path]) {
-				response.writeHead(200, {
-					"Content-Type": cache[path].type
-					});
+				response.writeHead(200, cache[path].header);
 				if(cache[path].handle) {
 					cache[path].handle(request, response, cache[path].file);
 					}
@@ -208,7 +224,7 @@ var	fdy={
 											}
 										if(!--rem) {
 											response.end(fdy.pages.DIR
-												.replace(/\$title/, request.url)
+												.replace(/\$title/g, request.url)
 												.replace(/{{[^]+?}}/, doc_dirs+doc_files)
 												);
 											}
@@ -232,13 +248,11 @@ var	fdy={
 								});
 							return;
 							}
-						response.writeHead(200, {
-							"Content-Type": mime.lookup(pathf)
-							});
+						response.writeHead(200, fdy.header[pathf.replace(/.+\./, "")]||fdy.header[""]);
 						if(fdy.cache) {
 							cache[path]={
 								file: file,
-								type: response._header["Content-Type"],
+								header: response._header,
 								expire: Date.now()+fdy.cache
 								};
 							}
@@ -258,4 +272,11 @@ var	fdy={
 			}).listen(port);
 		}
 	};
+void function() {
+	for(var key in mime) {
+		fdy.header[key]={
+			"Content-Type": mime[key]
+			};
+		}
+	}();
 module.exports=fdy;
