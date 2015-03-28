@@ -231,6 +231,7 @@
 	"fcdt": "application/vnd.adobe.formscentral.fcdt",
 	"fcs": "application/vnd.isac.fcs",
 	"fdf": "application/vnd.fdf",
+	"fdy": "text/html",
 	"fe_launch": "application/vnd.denovo.fcselayout-link",
 	"fg5": "application/vnd.fujitsu.oasysgp",
 	"fgd": "application/x-director",

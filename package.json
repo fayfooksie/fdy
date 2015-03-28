@@ -1,9 +1,12 @@
 {
 	"name": "fdy",
-	"version": "1.1.0",
+	"version": "2.0.0",
 	"author": "fay fooksie",
 	"description": "a simple file server with some features",
 	"main": "index.js",
+	"dependencies": {
+		"jht": "0.0.x"
+		},
 	"repository": {
 		"type": "git",
 		"url": "git://github.com/fayfooksie/fdy.git"

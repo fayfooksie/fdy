@@ -1,282 +1,334 @@
+//load modules
 var	fs=require("fs"),
-	http=require("http"),
+	http=require("http");
+var	jht=require("jht"),
 	mime=require("./mime.json"),
 	type=require("./type.json");
-var	cache={},
-	headers={},
+
+//setup variables
+var	_GET={},
+	_GETx={},
+	_POST={},
 	events={},
-	hidden={},
-	hiddens=[],
-	replaces=[],
+	headers={},
+	hiddens={},
+	replace=[],
 	redirect={},
 	redirects=[],
 	forbidden={},
 	forbiddens=[],
-	handle={},
-	handles=[];
-var	fdy={
-	fs: fs,
-	temp: {},
-	pages: {
+	pages={
+		"400": "400 Bad Request",
 		"403": "403 Forbidden",
 		"404": "404 Not Found",
-		"DIR": "<table width=\"100%\">{{<tr>"
-			+"<td><a href=\"$fileurl\">$filename</a></td>"
-			+"<td>$filesize</td>"
-			+"<td>$filedate</td>"
-			+"</tr>}}</table>"
-		},
-	cache: 3600,
-	index: true,
-	server: null,
-	directory: "./public",
-	on: function(event, callback) {
-		events[event]=callback;
-		},
-	set: function(key, url) {
-		fs.readFile(fdy.directory+"/"+url, "binary", function(error, file) {
-			if(error) {
-				console.error(error.stack);
+		"DIR": "<table width=\"100%\">\
+					<thead>\
+						<tr>\
+							<th>File</th>\
+							<th>Size</th>\
+							<th>Modified</th>\
+						</tr>\
+					</thead>\
+					<tbody>\
+						{each files}\
+							<tr>\
+								<td><a href=\"{path}\">{name}</a></td>\
+								<td>{size}</td>\
+								<td>{date}</td>\
+							</tr>\
+						{/each}\
+					</tbody>\
+				</table>"
+		};
+
+//setup server
+var	server=http.createServer(function(request, response) {
+	if(events.request) {
+		events.request(request);
+		}
+	if(request.url[0]!=="/") {
+		response.destroy();
+		}
+	else {
+		var	path=request.url.split(/\?/),
+			query=path[1]||"";
+		path=path[0];
+		try {
+			path=decodeURI(path);
+			if(/\\/.test(path)) {
+				throw 1;
 				}
-			else {
-				fdy.pages[key]=file;
-				}
-			});
-		},
-	header: function(ctype, header) {
-		if(type[ctype]) {
-			ctype=type[ctype];
-			for(var i=ctype.length, key; i--;) {
-				for(key in header) {
-					fdy.header[ctype[i]][key]=header[key];
-					}
-				}
+			}
+		catch(error) {
+			response.writeHead(400, {
+				"Content-Type": "text/html"
+				});
+			response.write(pages["400"]);
+			response.end();
+			return;
+			}
+		if(redirect[path]) {
+			response.writeHead(302, {
+				"Location": redirect[path]
+				});
+			response.end();
+			}
+		else if(forbidden[path]) {
+			response.writeHead(403, {
+				"Content-Type": "text/html"
+				});
+			response.write(pages["403"]);
+			response.end();
 			}
 		else {
-			if(!header["Content-Type"]) {
-				header["Content-Type"]=ctype;
+			var	opath=path;
+			for(var i=replace.length; i; i-=2) {
+				path=path.replace(replace[i-2], replace[i-1]);
 				}
-			fdy.header[ctype]=header;
-			}
-		},
-	hide: function(regex) {
-		if(regex.constructor===String) {
-			hidden[regex]=1;
-			}
-		else {
-			hiddens.push(regex);
-			}
-		},
-	replace: function(regex, string) {
-		replaces.push(regex, string);
-		},
-	redirect: function(regex, string) {
-		if(regex.constructor===String) {
-			redirect[regex]=string;
-			}
-		else {
-			redirects.push(regex, string);
-			}
-		},
-	forbidden: function(regex, files) {
-		if(regex.constructor===String) {
-			forbidden[regex]=1;
-			}
-		else {
-			forbiddens.push(regex, !files);
-			}
-		},
-	handle: function(regex, callback) {
-		handles.push(regex, callback);
-		},
-	listen: function(port) {
-		if(fdy.cache) {
-			fdy.cache*=1000;
-			setInterval(function() {
-				var	now=Date.now();
-				for(var path in cache) {
-					if(cache[path].expire>now) {
-						delete cache[path];
-						}
-					}
-				}, 60000);
-			}
-		fdy.server=http.createServer(function(request, response) {
-			if(events.request) {
-				events.request.call(fdy, request, response);
-				}
-			var	url=request.url.split(/\?/)[0],
-				path=decodeURIComponent(url),
-				noindex=request.url[request.url.length-1]==="/"
-					&&request.url[request.url.length-2]==="?";
-			for(var i=0; i<replaces.length; i+=2) {
-				path=path.replace(replaces[i], replaces[i+1]);
-				}
-			if(redirect[path]) {
-				response.writeHead(302, {
-					"Location": redirect[path]
-					});
-				response.end();
-				return;
-				}
-			for(var i=0; i<redirects.length; i+=2) {
-				if(redirects[i].test(path)) {
+			for(var i=redirects.length; i; i-=2) {
+				if(redirects[i-2].test(path)) {
 					response.writeHead(302, {
-						"Location": path.replace(redirects[i], redirects[i+1])
+						"Location": redirects[i-1]
 						});
 					response.end();
 					return;
 					}
 				}
-			if(forbidden[path]) {
-				response.writeHead(403, {
-					"Content-Type": "text/html"
-					});
-				response.end(fdy.pages["403"]);
-				return;
-				}
-			for(var i=0; i<forbiddens.length; i+=2) {
+			for(var i=forbiddens.length; i--;) {
 				if(forbiddens[i].test(path)) {
-					if(forbiddens[i+1] || !/\.\w+$/.test(path)) {
-						response.writeHead(403, {
-							"Content-Type": "text/html"
-							});
-						response.end(fdy.pages["403"]);
-						return;
-						}
-					}
-				}
-			if(!noindex && cache[path]) {
-				response.writeHead(200, cache[path].header);
-				if(cache[path].handle) {
-					cache[path].handle(request, response, cache[path].file);
-					}
-				else {
-					response.end(cache[path].file, "binary");
-					}
-				cache[path].expire=Date.now()+fdy.cache;
-				return;
-				}
-			var	pathf=fdy.directory+path;
-			fs.exists(pathf, function(exists) {
-				if(!exists) {
-					response.writeHead(404, {
+					response.writeHead(403, {
 						"Content-Type": "text/html"
 						});
-					response.end(fdy.pages["404"]);
+					response.write(pages["403"]);
+					response.end();
 					return;
 					}
-				fs.stat(pathf, function(error, stats) {
-					if(stats.isDirectory()) {
-						pathf+="index.html"
+				}
+			if(request.method==="POST") {
+				if(_POST[path]) {
+					if(query) {
+						_POST[path](request, response, query);
 						}
-					fs.readFile(pathf, "binary", function(error, file) {
-						if(error || noindex) {
-							if(url[url.length-1]!=="/") {
+					else {
+						request.on("data", function(data) {
+							query+=data;
+							});
+						request.on("end", function() {
+							_POST[path](request, response, query);
+							});
+						}
+					}
+				else {
+					response.writeHead(404);
+					response.end();
+					}
+				}
+			else {
+				if(_GETx[path]) {
+					_GETx[path](request, response, query);
+					}
+				else {
+					var	_path="./public"+path;
+					fs.stat(_path, function(error, stats) {
+						if(error) {
+							response.setHeader("Content-Type", "text/html");
+							response.writeHead(404, headers["text/html"]);
+							response.write(pages["404"]);
+							response.end();
+							}
+						else if((stats.mode&0xf000)===0x4000) {
+							if(path[path.length-1]==="/") {
+								response.setHeader("Content-Type", "text/html");
+								fs.stat(_path+"index.html", function(error, stats) {
+									if(error) {
+										fs.readdir(_path, function(error, files) {
+											response.writeHead(200, headers["text/html"]);
+											statchain(_path, path, files, 0, [{
+												dir: 1,
+												name: "../",
+												path: "../",
+												size: "-",
+												date: "-"
+												}], [], response);
+											});
+										}
+									else {
+										response.setHeader("Last-Modified", stats.mtime)
+										response.writeHead(200, headers["text/html"]);
+										if(request.method!=="HEAD") {
+											fs.readFile(_path+"index.html", function(error, data) {
+												if(_GET[path]) {
+													_GET[path](request, response, data.toString(), query);
+													}
+												else {
+													response.write(data);
+													response.end();
+													}
+												});
+											}
+										}
+									});
+								}
+							else {
 								response.writeHead(302, {
-									"Location": url+"/"
+									"Location": query?
+										opath+"/?"+query:
+										opath+"/"
 									});
 								response.end();
-								return;
 								}
-							if(!fdy.index) {
-								response.writeHead(403, {
-									"Content-Type": "text/html"
-									});
-								response.end(fdy.pages["403"]);
-								return;
+							}
+						else {
+							var	type=mime[path.replace(/.+\./, "")],
+								lmod=request.headers["if-modified-since"];
+							if(lmod && new Date(lmod) <= stats.mtime) {
+								response.writeHead(304, headers[type]);
+								response.end();
 								}
-							response.writeHead(200, {
-									"Content-Type": "text/html"
-									});
-							pathf=fdy.directory+path;
-							var	fmt=fdy.pages.DIR
-									.match(/{{([^]+?)}}/)[1],
-								doc_files="",
-								doc_dirs=fmt
-									.replace(/\$fileurl|\$filename/g, "../")
-									.replace(/\$filesize|\$filedate/g, "-");
-							fs.readdir(pathf, function(error, files) {
-								function fsize(size) {
-									if(size>1073741824) {
-										return (size/1073741824).toFixed(2)+" GB";
-										}
-									if(size>1048576) {
-										return (size/1048576).toFixed(2)+" MB";
-										}
-									return (size/1024).toFixed(2)+" KB";
-									};
-								function fstat(fname) {
-									fs.stat(pathf+fname, function(error, stats) {
-										if(stats.isDirectory()) {
-											doc_dirs+=fmt
-												.replace(/\$fileurl/, encodeURIComponent(fname)+"/")
-												.replace(/\$filename/, fname+"/")
-												.replace(/\$filesize/, "-")
-												.replace(/\$filedate/, stats.mtime.toDateString());
+							else {
+								response.setHeader("Content-Type", type);
+								response.setHeader("Last-Modified", stats.mtime);
+								response.writeHead(200, headers[type]);
+								if(request.method!=="HEAD") {
+									fs.readFile(_path, function(error, data) {
+										if(_GET[path]) {
+											_GET[path](query, response, data.toString());
 											}
 										else {
-											doc_files+=fmt
-												.replace(/\$fileurl/, encodeURIComponent(fname))
-												.replace(/\$filename/, fname)
-												.replace(/\$filesize/, fsize(stats.size))
-												.replace(/\$filedate/, stats.mtime.toDateString());
-											}
-										if(!--rem) {
-											response.end(fdy.pages.DIR
-												.replace(/\$title/g, request.url)
-												.replace(/{{[^]+?}}/, doc_dirs+doc_files)
-												);
+											response.write(data);
+											response.end();
 											}
 										});
-									};
-								fileloop:
-								for(var i=0, j, f, rem=files.length; i<files.length; ++i) {
-									f=path+files[i];
-									if(hidden[f]) {
-										--rem;
-										continue;
-										}
-									for(j=0; j<hiddens.length; ++j) {
-										if(hiddens[j].test(f)) {
-											--rem;
-											continue fileloop;
-											}
-										}
-									fstat(files[i]);
 									}
-								});
-							return;
-							}
-						response.writeHead(200, fdy.header[pathf.replace(/.+\./, "")]||fdy.header[""]);
-						if(fdy.cache) {
-							cache[path]={
-								file: file,
-								header: response._header,
-								expire: Date.now()+fdy.cache
-								};
-							}
-						for(var i=0; i<handles.length; i+=2) {
-							if(handles[i]===path) {
-								if(fdy.cache) {
-									cache[path].handle=handles[i+1];
-									}
-								handles[i+1](request, response, file);
-								return;
 								}
 							}
-						response.end(file, "binary");
 						});
-					});
-				});
-			}).listen(port);
+					}
+				}
+			}
+		}
+	});
+
+//define methods
+function parse(query) {
+	var	object={};
+	query=query.split(/\&|=/);
+	try {
+		for(var i=0; i<query.length; i+=2) {
+			object[decodeURIComponent(query[i])]=decodeURIComponent(query[i+1]);
+			}
+		return object;
+		}
+	catch(error) {
+		return null;
 		}
 	};
-void function() {
-	for(var key in mime) {
-		fdy.header[key]={
-			"Content-Type": mime[key]
-			};
+function sizef(size) {
+	if(size>1073741824) {
+		return (size/1073741824).toFixed(2)+" GB";
 		}
-	}();
-module.exports=fdy;
+	if(size>1048576) {
+		return (size/1048576).toFixed(2)+" MB";
+		}
+	return (size/1024).toFixed(2)+" KB";
+	};
+function statchain(_path, path, files, index, rdirs, rfiles, response) {
+	if(index<files.length) {
+		if(files[index].length>1 && !hiddens[files[index]]) {
+			fs.stat(_path+files[index], function(error, stats) {
+				if(!error) {
+					if((stats.mode&0xf000)===0x4000) {
+						rdirs.push({
+							dir: 1,
+							path: encodeURI(files[index])+"/",
+							name: files[index]+"/",
+							size: "-",
+							date: "-"
+							});
+						}
+					else {
+						rfiles.push({
+							dir: 0,
+							path: encodeURI(files[index]),
+							name: files[index],
+							size: sizef(stats.size),
+							date: stats.mtime.toDateString()
+							});
+						}
+					}
+				statchain(_path, path, files, index+1, rdirs, rfiles, response);
+				});
+			}
+		else {
+			statchain(_path, path, files, index+1, rdirs, rfiles, response);
+			}
+		}
+	else {
+		response.write(
+			jht.parse(jht.compress(pages["DIR"]), {
+				path: path,
+				files: rdirs.concat(rfiles)
+				})
+			);
+		response.end();
+		}
+	};
+
+//export module
+module.exports={
+	jht: jht,
+	parse: parse,
+	listen: function(port) {
+		server.listen(port);
+		},
+	page: function(name, path) {
+		pages[name]=fs.readFileSync("./public"+path, "utf-8");
+		},
+	header: function(ct, data) {
+		if(type[ct]) {
+			ct=type[ct];
+			for(var i=ct.length, key; i--;) {
+				headers[mime[ct[i]]]=data;
+				}
+			}
+		else {
+			headers[ct]=data;
+			}
+		},
+	on: function(event, callback) {
+		events[event]=callback;
+		},
+	handle: function(method, path, callback, exists) {
+		if(method==="POST") {
+			_POST[path]=callback;
+			}
+		else if(exists) {
+			_GET[path]=callback;
+			}
+		else {
+			_GETx[path]=callback;
+			}
+		},
+	hide: function(path) {
+		hiddens[path]=1;
+		},
+	replace: function(regex, to) {
+		replace.push(regex, to);
+		},
+	redirect: function(from, to) {
+		if(from.constructor===String) {
+			redirect[from]=to;
+			}
+		else {
+			redirects.push(from, to);
+			}
+		},
+	forbidden: function(path) {
+		if(path.constructor===String) {
+			forbidden[path]=1;
+			}
+		else {
+			forbiddens.push(path);
+			}
+		}
+	};
