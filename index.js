@@ -181,7 +181,7 @@ var	server=http.createServer(function(request, response) {
 						else {
 							var	type=mime[path.replace(/.+\./, "")],
 								lmod=request.headers["if-modified-since"];
-							if(lmod && new Date(lmod) <= stats.mtime) {
+							if(lmod && new Date(lmod) >= stats.mtime) {
 								response.writeHead(304, headers[type]);
 								response.end();
 								}
